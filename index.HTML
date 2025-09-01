@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Check-Up 서비스 | 투자 제안서</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', 'Inter', sans-serif;
+            background-color: #0a0a0a;
+            color: #e5e5e5;
+            scroll-behavior: smooth;
+        }
+        .section {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 10rem 2rem;
+            border-bottom: 1px solid #27272a;
+        }
+        .section:last-child {
+            border-bottom: none;
+        }
+        .gradient-text {
+            background: linear-gradient(90deg, #4f46e5, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .typing-cursor {
+            border-right: .15em solid #4f46e5;
+            animation: blink-caret .75s step-end infinite;
+        }
+        @keyframes blink-caret {
+            from, to { border-color: transparent }
+            50% { border-color: #4f46e5; }
+        }
+        .fade-in-section {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+        .fade-in-section.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .matrix-cell {
+            transition: all 0.3s ease;
+        }
+        .matrix-cell:hover {
+            transform: scale(1.1);
+            background-color: #4f46e5 !important;
+        }
+        .pricing-tier {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .pricing-tier.selected, .pricing-tier:hover {
+            transform: translateY(-10px);
+            border-color: #4f46e5;
+        }
+        .team-member:hover .team-overlay {
+            opacity: 1;
+        }
+
+        /* Chatbot styles */
+        .chatbot-container {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 1000;
+        }
+        .chatbot-toggler {
+            width: 60px;
+            height: 60px;
+            background: #4f46e5;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        .chatbot-toggler:hover {
+            transform: scale(1.1);
+        }
+        .chatbot-window {
+            position: absolute;
+            bottom: 80px;
+            right: 0;
+            width: 350px;
+            height: 450px;
+            background: #18181b;
+            border: 1px solid #27272a;
+            border-radius: 1rem;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            pointer-events: none;
+        }
+        .chatbot-window.show {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+        .chat-header {
+            padding: 1rem;
+            background: #27272a;
+            font-weight: bold;
+            color: white;
+            text-align: center;
+        }
+        .chat-body {
+            flex-grow: 1;
+            padding: 1rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .chat-message {
+            padding: 0.5rem 1rem;
+            border-radius: 1rem;
+            max-width: 80%;
+        }
+        .chat-message.user {
+            background: #4f46e5;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 0;
+        }
+        .chat-message.bot {
+            background: #3f3f46;
+            color: #e5e5e5;
+            align-self: flex-start;
+            border-bottom-left-radius: 0;
+        }
+        .chat-questions {
+            padding: 1rem;
+            border-top: 1px solid #27272a;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .chat-question-btn {
+            background: #3f3f46;
+            color: white;
+            border: none;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            text-align: left;
+            transition: background 0.2s ease;
+        }
+        .chat-question-btn:hover {
+            background: #4f46e5;
+        }
+    </style>
+</head>
+<body class="bg-zinc-900 text-zinc-200">
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 right-0 bg-black/30 backdrop-blur-md p-4 z-50">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold gradient-text">AI Check-Up</h1>
+            <div class="hidden md:flex space-x-6 text-sm">
+                <a href="#problem" class="hover:text-indigo-400">문제점</a>
+                <a href="#solution" class="hover:text-indigo-400">해결책</a>
+                <a href="#demo" class="hover:text-indigo-400">인터랙티브 데모</a>
+                <a href="#market" class="hover:text-indigo-400">시장성</a>
+                <a href="#team" class="hover:text-indigo-400">팀</a>
+                <a href="#ask" class="hover:text-indigo-400">투자 제안</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 1. Landing Page -->
+    <section id="landing" class="section h-screen text-center relative overflow-hidden">
+        <div class="absolute inset-0 bg-grid-zinc-800 [mask-image:linear-gradient(to_bottom,white_10%,transparent_90%)]"></div>
+        <div class="relative z-10">
+            <h1 class="text-5xl md:text-7xl font-black mb-4">
+                <span class="gradient-text">기업의 재무 데이터</span>,
+            </h1>
+            <h2 class="text-5xl md:text-7xl font-black mb-8">
+                <span id="typing-slogan"></span><span class="typing-cursor"></span>
+            </h2>
+            <p class="text-lg text-zinc-400 max-w-2xl mx-auto mb-10">
+                AI Check-Up은 잠자고 있는 데이터를 분석하여 미래의 위험을 예측하고, 성장의 기회를 발견하는 실시간 재무 주치의입니다.
+            </p>
+            <a href="#problem" class="bg-indigo-600 text-white font-bold py-3 px-8 rounded-full text-lg hover:bg-indigo-500 transition-transform transform hover:scale-105">
+                우리의 비전 확인하기
+            </a>
+        </div>
+    </section>
+
+    <!-- 2. The Problem -->
+    <section id="problem" class="section fade-in-section">
+        <div class="text-center max-w-4xl">
+            <h2 class="text-4xl md:text-5xl font-bold mb-4">사장님들은 여전히 <span class="gradient-text">'어제의 데이터'</span>로</h2>
+            <h2 class="text-4xl md:text-5xl font-bold mb-12">'내일의 결정'을 합니다.</h2>
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="bg-zinc-800/50 p-8 rounded-2xl">
+                    <div class="text-6xl font-black text-indigo-400 mb-4 counter" data-target="70">0</div>
+                    <h3 class="text-xl font-bold mb-2">%</h3>
+                    <p class="text-zinc-400">창업 5년 내 폐업률. 대부분 재무 관리 실패가 원인입니다.</p>
+                </div>
+                <div class="bg-zinc-800/50 p-8 rounded-2xl">
+                    <div class="text-6xl font-black text-pink-400 mb-4 counter" data-target="82">0</div>
+                    <h3 class="text-xl font-bold mb-2">%</h3>
+                    <p class="text-zinc-400">중소기업이 겪는 현금 흐름 문제. 예측 실패가 사업을 위협합니다.</p>
+                </div>
+                <div class="bg-zinc-800/50 p-8 rounded-2xl">
+                    <div class="text-6xl font-black text-emerald-400 mb-4 counter" data-target="12">0</div>
+                    <h3 class="text-xl font-bold mb-2">시간</h3>
+                    <p class="text-zinc-400">CEO가 한 달 평균 재무 보고서 분석에 낭비하는 시간입니다.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3. The Solution -->
+    <section id="solution" class="section fade-in-section">
+        <div class="text-center max-w-5xl w-full">
+            <h2 class="text-4xl md:text-5xl font-bold mb-16"><span class="gradient-text">AI 재무 주치의</span>가 24시간 당신의 회사를 돌봅니다.</h2>
+            <div class="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-0 w-full">
+                <div class="solution-step text-center p-4">
+                    <div class="text-3xl mb-2">📊</div>
+                    <h3 class="font-bold">데이터 연동</h3>
+                    <p class="text-sm text-zinc-400">뱅킹, 회계 데이터를 API로 자동 연동</p>
+                </div>
+                <div class="text-2xl text-zinc-600 mx-4">→</div>
+                <div class="solution-step text-center p-4">
+                    <div class="text-3xl mb-2">🤖</div>
+                    <h3 class="font-bold">AI 분석 엔진</h3>
+                    <p class="text-sm text-zinc-400">이상 징후 탐지 및 미래 예측</p>
+                </div>
+                <div class="text-2xl text-zinc-600 mx-4">→</div>
+                <div class="solution-step text-center p-4">
+                    <div class="text-3xl mb-2">📈</div>
+                    <h3 class="font-bold">실시간 대시보드</h3>
+                    <p class="text-sm text-zinc-400">언제 어디서든 재무 상태 확인</p>
+                </div>
+                 <div class="text-2xl text-zinc-600 mx-4">→</div>
+                <div class="solution-step text-center p-4">
+                    <div class="text-3xl mb-2">👨‍💼</div>
+                    <h3 class="font-bold">전문가 협업</h3>
+                    <p class="text-sm text-zinc-400">AI분석 기반의 전략적 의사결정</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4. The "WOW" Moment: Interactive Demo -->
+    <section id="demo" class="section fade-in-section">
+        <div class="text-center max-w-6xl w-full">
+            <h2 class="text-4xl md:text-5xl font-bold mb-4">보고서가 아닌, <span class="gradient-text">경험</span>을 투자하세요.</h2>
+            <p class="text-zinc-400 mb-12">가상 회사 'ABC 그로스(주)'의 대시보드를 직접 체험해보세요.</p>
+
+            <div class="bg-zinc-900/50 border border-zinc-700 rounded-2xl p-8 w-full">
+                <h3 class="text-2xl font-bold mb-2 text-left">가상 경영 시뮬레이션</h3>
+                <p class="text-zinc-400 mb-6 text-left">변수를 조절하여 미래 재무 예측 그래프의 변화를 실시간으로 확인하세요.</p>
+                
+                <div class="grid md:grid-cols-3 gap-8 items-center">
+                    <div class="md:col-span-1 space-y-6">
+                        <div>
+                            <label for="newHires" class="block text-sm font-medium text-zinc-300 mb-2">신규 채용 인원 (명)</label>
+                            <input id="newHires" type="range" min="0" max="50" value="10" class="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer">
+                            <div class="text-center text-indigo-400 font-bold mt-2"><span id="newHiresValue">10</span>명</div>
+                        </div>
+                        <div>
+                            <label for="marketingBudget" class="block text-sm font-medium text-zinc-300 mb-2">월 마케팅 예산 (백만원)</label>
+                            <input id="marketingBudget" type="range" min="0" max="100" value="20" class="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer">
+                             <div class="text-center text-pink-400 font-bold mt-2"><span id="marketingBudgetValue">20</span>백만원</div>
+                        </div>
+                        <button id="govSupportBtn" class="w-full bg-emerald-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-emerald-500 transition">
+                            🤖 AI 정책자금 매칭 확인
+                        </button>
+                    </div>
+                    <div class="md:col-span-2">
+                        <canvas id="simulationChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- 5. Market & Business Model -->
+    <section id="market" class="section fade-in-section">
+        <div class="text-center max-w-6xl w-full">
+            <h2 class="text-4xl md:text-5xl font-bold mb-16">명확한 시장과 <span class="gradient-text">확장 가능한 수익 모델</span></h2>
+            <div class="grid md:grid-cols-2 gap-12">
+                <!-- Market Size -->
+                <div>
+                    <h3 class="text-2xl font-bold mb-6">국내 중소기업 재무 관리 시장</h3>
+                    <div class="bg-zinc-800/50 p-6 rounded-xl">
+                        <canvas id="marketChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Business Model -->
+                <div>
+                    <h3 class="text-2xl font-bold mb-6">SaaS 구독 기반 수익 모델</h3>
+                    <div class="space-y-4">
+                        <div class="pricing-tier border-2 border-zinc-700 p-6 rounded-xl text-left">
+                            <h4 class="font-bold text-lg text-indigo-400">Basic</h4>
+                            <p class="text-zinc-400 text-sm">스타트업을 위한 필수 기능</p>
+                        </div>
+                        <div class="pricing-tier border-2 border-zinc-700 p-6 rounded-xl text-left selected">
+                            <h4 class="font-bold text-lg text-pink-400">Standard</h4>
+                            <p class="text-zinc-400 text-sm">성장 기업을 위한 AI 분석 및 예측</p>
+                        </div>
+                        <div class="pricing-tier border-2 border-zinc-700 p-6 rounded-xl text-left">
+                            <h4 class="font-bold text-lg text-emerald-400">Premium</h4>
+                            <p class="text-zinc-400 text-sm">전문가 협업을 통한 의사결정 지원</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 6. Our Team & Vision -->
+    <section id="team" class="section fade-in-section">
+        <div class="text-center max-w-5xl">
+            <h2 class="text-4xl md:text-5xl font-bold mb-12">데이터와 금융을 이해하는 <span class="gradient-text">최고의 팀</span></h2>
+            <div class="flex justify-center gap-8 mb-16">
+                <!-- Team Member 1 -->
+                <div class="relative w-40 h-40 rounded-full overflow-hidden group team-member">
+                    <img src="https://placehold.co/200x200/18181b/e5e5e5?text=CEO" alt="CEO 김대표" class="w-full h-full object-cover">
+                    <div class="team-overlay absolute inset-0 bg-black/70 flex flex-col justify-center items-center opacity-0 transition-opacity duration-300">
+                        <h4 class="font-bold text-white">김대표</h4>
+                        <p class="text-sm text-zinc-300">CEO</p>
+                    </div>
+                </div>
+                <!-- Team Member 2 -->
+                <div class="relative w-40 h-40 rounded-full overflow-hidden group team-member">
+                    <img src="https://placehold.co/200x200/18181b/e5e5e5?text=CTO" alt="CTO 이기술" class="w-full h-full object-cover">
+                    <div class="team-overlay absolute inset-0 bg-black/70 flex flex-col justify-center items-center opacity-0 transition-opacity duration-300">
+                        <h4 class="font-bold text-white">이기술</h4>
+                        <p class="text-sm text-zinc-300">CTO</p>
+                    </div>
+                </div>
+                 <!-- Team Member 3 -->
+                <div class="relative w-40 h-40 rounded-full overflow-hidden group team-member">
+                    <img src="https://placehold.co/200x200/18181b/e5e5e5?text=CFO" alt="CFO 박재무" class="w-full h-full object-cover">
+                    <div class="team-overlay absolute inset-0 bg-black/70 flex flex-col justify-center items-center opacity-0 transition-opacity duration-300">
+                        <h4 class="font-bold text-white">박재무</h4>
+                        <p class="text-sm text-zinc-300">CFO</p>
+                    </div>
+                </div>
+            </div>
+             <h3 class="text-3xl font-bold mt-16 mb-6">우리의 비전: 아시아 최고의 중소기업 금융 데이터 플랫폼</h3>
+        </div>
+    </section>
+
+    <!-- 7. The Ask -->
+    <section id="ask" class="section fade-in-section">
+        <div class="text-center max-w-4xl w-full">
+            <h2 class="text-4xl md:text-5xl font-bold mb-12">함께 성장할 <span class="gradient-text">파트너</span>를 찾습니다.</h2>
+            <div class="grid md:grid-cols-2 gap-12 items-center">
+                <div class="text-left">
+                    <h3 class="text-2xl font-bold mb-4">목표 투자 유치 금액</h3>
+                    <p class="text-6xl font-black mb-8">20<span class="text-4xl text-zinc-400">억원</span></p>
+                    <h3 class="text-2xl font-bold mb-4">예상 마일스톤 (18개월)</h3>
+                    <ul class="space-y-2 text-zinc-300">
+                        <li>✅ 유료 고객사 500개 확보</li>
+                        <li>✅ 월 반복 매출 (MRR) 1억원 달성</li>
+                        <li>✅ AI 예측 정확도 95% 달성</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-bold mb-4">자금 사용 계획</h3>
+                    <canvas id="askChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- 8. Contact -->
+    <footer id="contact" class="section !min-h-0 py-20 bg-zinc-900/50">
+        <div class="text-center">
+            <h2 class="text-3xl font-bold mb-4">미래를 함께 만들 준비가 되셨나요?</h2>
+            <p class="text-zinc-400 mb-8">지금 바로 연락주시면, 더 자세한 사업 계획과 실제 데모를 보여드리겠습니다.</p>
+            <div class="flex justify-center gap-4">
+                <a href="mailto:contact@aicheckup.com" class="bg-indigo-600 text-white font-bold py-3 px-8 rounded-full hover:bg-indigo-500 transition">실제 데모 미팅 요청</a>
+                <a href="#" class="border border-zinc-600 text-zinc-300 font-bold py-3 px-8 rounded-full hover:bg-zinc-800 transition">사업계획서 다운로드</a>
+            </div>
+            <p class="text-sm text-zinc-600 mt-12">© 2025 AI Check-Up Inc. All Rights Reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Chatbot Floating Button & Window -->
+    <div class="chatbot-container">
+        <div id="chatbot-window" class="chatbot-window">
+            <div class="chat-header">AI 재무 챗봇 체험</div>
+            <div id="chat-body" class="chat-body">
+                <div class="chat-message bot">안녕하세요! 'ABC 그로스(주)'의 AI 재무 챗봇입니다. 아래 질문을 선택해 보세요.</div>
+            </div>
+            <div id="chat-questions" class="chat-questions">
+                <button class="chat-question-btn" data-question="지난 분기 매출은?">지난 분기 매출은?</button>
+                <button class="chat-question-btn" data-question="가장 큰 비용 리스크는 뭐야?">가장 큰 비용 리스크는 뭐야?</button>
+            </div>
+        </div>
+        <div id="chatbot-toggler" class="chatbot-toggler">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5z" clip-rule="evenodd" fill-rule="evenodd" fill-opacity="0.2"/>
+                <path d="M4 9a2 2 0 100-4 2 2 0 000 4zM2 9a2 2 0 114 0 2 2 0 01-4 0zM8 9a2 2 0 100-4 2 2 0 000 4zM6 9a2 2 0 114 0 2 2 0 01-4 0zm6 0a2 2 0 100-4 2 2 0 000 4zm-2 0a2 2 0 114 0 2 2 0 01-4 0zm6 0a2 2 0 100-4 2 2 0 000 4zm-2 0a2 2 0 114 0 2 2 0 01-4 0z" />
+            </svg>
+        </div>
+    </div>
+    
+    <!-- Modal for Gov Support -->
+    <div id="govSupportModal" class="fixed inset-0 bg-black/60 items-center justify-center hidden z-50">
+        <div class="bg-zinc-800 rounded-2xl p-8 max-w-md w-full text-center relative">
+            <button id="closeModalBtn" class="absolute top-4 right-4 text-zinc-500 hover:text-white">&times;</button>
+            <div class="text-3xl mb-4">🤖</div>
+            <h3 class="text-2xl font-bold mb-4 text-emerald-400">AI 정책자금 매칭 결과</h3>
+            <p class="text-zinc-300">'ABC 그로스(주)'의 기업 데이터를 분석한 결과, 아래 지원사업과의 적합도가 높게 나타났습니다.</p>
+            <div class="bg-zinc-700/50 p-6 rounded-lg mt-6 text-left">
+                <h4 class="font-bold text-lg">TIPS (팁스 프로그램)</h4>
+                <p class="text-sm text-zinc-400 mb-2">민간투자주도형 기술창업지원</p>
+                <div class="w-full bg-zinc-600 rounded-full h-2.5">
+                    <div class="bg-emerald-500 h-2.5 rounded-full" style="width: 92%"></div>
+                </div>
+                <p class="text-right text-sm font-bold mt-1">적합도: 92%</p>
+                 <p class="mt-4">예상 지원금: <span class="font-bold text-white">최대 7억원</span> (R&D + 사업화)</p>
+            </div>
+            <p class="text-xs text-zinc-500 mt-6">※ 본 결과는 시뮬레이션이며 실제 결과와 다를 수 있습니다.</p>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 1. Typing Animation
+            const typingElement = document.getElementById('typing-slogan');
+            const slogan = "잠재력이 되다.";
+            let i = 0;
+            function typeSlogan() {
+                if (i < slogan.length) {
+                    typingElement.innerHTML += slogan.charAt(i);
+                    i++;
+                    setTimeout(typeSlogan, 150);
+                }
+            }
+            typeSlogan();
+
+            // 2. Fade In on Scroll
+            const sections = document.querySelectorAll('.fade-in-section');
+            const observer = new IntersectionObserver(entries => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                    }
+                });
+            }, { threshold: 0.1 });
+            sections.forEach(section => observer.observe(section));
+            
+            // 3. Counter Animation
+            const counterObserver = new IntersectionObserver(entries => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const counter = entry.target;
+                        const target = +counter.getAttribute('data-target');
+                        let current = 0;
+                        const increment = target / 100;
+
+                        const updateCounter = () => {
+                            if (current < target) {
+                                current += increment;
+                                counter.innerText = Math.ceil(current);
+                                requestAnimationFrame(updateCounter);
+                            } else {
+                                counter.innerText = target;
+                            }
+                        };
+                        updateCounter();
+                        counterObserver.unobserve(counter); // Animate only once
+                    }
+                });
+            }, { threshold: 0.8 });
+            document.querySelectorAll('.counter').forEach(counter => counterObserver.observe(counter));
+
+            // 4. Interactive Demo Simulation Chart
+            const hiresInput = document.getElementById('newHires');
+            const budgetInput = document.getElementById('marketingBudget');
+            const hiresValue = document.getElementById('newHiresValue');
+            const budgetValue = document.getElementById('marketingBudgetValue');
+            
+            const simCtx = document.getElementById('simulationChart').getContext('2d');
+            const simulationChart = new Chart(simCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Q1', 'Q2', 'Q3', 'Q4', 'Q1 (예측)', 'Q2 (예측)'],
+                    datasets: [{
+                        label: '예상 매출 (억원)',
+                        borderColor: '#4f46e5',
+                        backgroundColor: '#4f46e5_33',
+                        fill: true,
+                        data: [],
+                        tension: 0.4
+                    }, {
+                        label: '예상 비용 (억원)',
+                        borderColor: '#ec4899',
+                        backgroundColor: '#ec4899_33',
+                        fill: true,
+                        data: [],
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: { 
+                            beginAtZero: true,
+                            ticks: { color: '#a1a1aa' },
+                            grid: { color: '#27272a' }
+                        },
+                        x: {
+                            ticks: { color: '#a1a1aa' },
+                            grid: { color: '#27272a' }
+                        }
+                    },
+                    plugins: {
+                        legend: { labels: { color: '#e5e5e5' } }
+                    }
+                }
+            });
+
+            function updateSimulation() {
+                const hires = parseInt(hiresInput.value);
+                const budget = parseInt(budgetInput.value);
+                hiresValue.innerText = hires;
+                budgetValue.innerText = budget;
+
+                const baseRevenue = [10, 12, 15, 18];
+                const baseCost = [8, 9, 11, 12];
+
+                // 예측 로직 (단순화된 모델)
+                const futureRevenue1 = baseRevenue[3] + (hires * 0.2) + (budget * 0.15);
+                const futureRevenue2 = futureRevenue1 * 1.1 + (hires * 0.25) + (budget * 0.2);
+                const futureCost1 = baseCost[3] + (hires * 0.1) + budget * 0.05;
+                const futureCost2 = futureCost1 * 1.05 + (hires * 0.12);
+
+                simulationChart.data.datasets[0].data = [...baseRevenue, futureRevenue1, futureRevenue2];
+                simulationChart.data.datasets[1].data = [...baseCost, futureCost1, futureCost2];
+                simulationChart.update();
+            }
+            
+            hiresInput.addEventListener('input', updateSimulation);
+            budgetInput.addEventListener('input', updateSimulation);
+            updateSimulation(); // Initial call
+            
+            // 5. Market Chart
+            const marketCtx = document.getElementById('marketChart').getContext('2d');
+            new Chart(marketCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['TAM (전체 시장)', 'SAM (유효 시장)', 'SOM (수익 시장)'],
+                    datasets: [{
+                        label: '시장 규모 (조원)',
+                        data: [10, 3, 0.5],
+                        backgroundColor: ['#4338ca', '#be185d', '#059669']
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    scales: {
+                         x: { ticks: { color: '#a1a1aa' }, grid: { color: '#27272a' } },
+                         y: { ticks: { color: '#a1a1aa' }, grid: { color: '#27272a' } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // 6. 'The Ask' Chart
+            const askCtx = document.getElementById('askChart').getContext('2d');
+            new Chart(askCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['R&D/모델 고도화', '마케팅/시장 확대', '핵심 인재 영입'],
+                    datasets: [{
+                        data: [40, 35, 25],
+                        backgroundColor: ['#4f46e5', '#ec4899', '#10b981']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#e5e5e5' } }
+                    }
+                }
+            });
+            
+            // 7. Chatbot logic
+            const chatbotToggler = document.getElementById('chatbot-toggler');
+            const chatbotWindow = document.getElementById('chatbot-window');
+            const chatBody = document.getElementById('chat-body');
+            
+            chatbotToggler.addEventListener('click', () => {
+                chatbotWindow.classList.toggle('show');
+            });
+            
+            document.querySelectorAll('.chat-question-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const question = btn.dataset.question;
+                    
+                    // Add user message
+                    const userMsg = document.createElement('div');
+                    userMsg.className = 'chat-message user';
+                    userMsg.textContent = question;
+                    chatBody.appendChild(userMsg);
+                    chatBody.scrollTop = chatBody.scrollHeight;
+
+                    // Generate bot response
+                    setTimeout(() => generateBotResponse(question), 500);
+                });
+            });
+
+            function generateBotResponse(question) {
+                const botMsg = document.createElement('div');
+                botMsg.className = 'chat-message bot';
+                
+                if (question === "지난 분기 매출은?") {
+                    botMsg.innerHTML = `<p>지난 분기(Q4) 매출은 18억원으로, 전분기 대비 20% 성장했습니다. 제품별 매출 데이터입니다.</p>
+                                       <canvas id="revenueChart" height="150"></canvas>`;
+                    chatBody.appendChild(botMsg);
+                    
+                    // Render chart inside chatbot
+                    new Chart(document.getElementById('revenueChart').getContext('2d'), {
+                        type: 'bar',
+                        data: {
+                            labels: ['제품 A', '제품 B', '제품 C'],
+                            datasets: [{ label: '매출 (억원)', data: [10, 6, 2], backgroundColor: '#4f46e5' }]
+                        },
+                        options: {
+                            responsive: true,
+                            scales: {
+                                y: { ticks: { color: '#e5e5e5' }, grid: { color: '#3f3f46' } },
+                                x: { ticks: { color: '#e5e5e5' }, grid: { color: '#3f3f46' } }
+                            },
+                            plugins: { legend: { display: false } }
+                        }
+                    });
+
+                } else if (question === "가장 큰 비용 리스크는 뭐야?") {
+                    botMsg.innerHTML = `<p>AI 분석 결과, '광고선전비'가 최근 3개월간 40% 급증하여 가장 큰 비용 리스크로 확인되었습니다. 특히 X플랫폼 광고 효율이 감소하고 있어 검토가 필요합니다.</p>`;
+                    chatBody.appendChild(botMsg);
+                }
+                chatBody.scrollTop = chatBody.scrollHeight;
+            }
+
+            // 8. Modal Logic
+            const govSupportBtn = document.getElementById('govSupportBtn');
+            const modal = document.getElementById('govSupportModal');
+            const closeModalBtn = document.getElementById('closeModalBtn');
+
+            govSupportBtn.addEventListener('click', () => {
+                modal.style.display = 'flex';
+            });
+            closeModalBtn.addEventListener('click', () => {
+                modal.style.display = 'none';
+            });
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>
